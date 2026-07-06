@@ -1,0 +1,190 @@
+#!/usr/bin/env node
+// cli.ts — hand-rolled arg parsing + subcommands: pack, estimate, bench, install-skill.
+
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
+import { renderFile, PROFILES, geometry, wrapLines, paginate, PageDim, Density, PAGE_W, PAGE_H, MARGIN } from "./render";
+import { estimate, imageTokens, textTokens, PRICING_PER_MTOK, dollarsSaved, Estimate } from "./estimate";
+import { runBench } from "./bench";
+
+const DENSITIES: Density[] = ["conservative", "balanced", "max"];
+
+interface Args {
+  positional: string[];
+  flags: Record<string, string | boolean>;
+}
+
+function parseArgs(argv: string[]): Args {
+  const positional: string[] = [];
+  const flags: Record<string, string | boolean> = {};
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a.startsWith("--")) {
+      const key = a.slice(2);
+      const next = argv[i + 1];
+      if (next !== undefined && !next.startsWith("--")) {
+        flags[key] = next;
+        i++;
+      } else {
+        flags[key] = true;
+      }
+    } else {
+      positional.push(a);
+    }
+  }
+  return { positional, flags };
+}
+
+function resolveDensity(flags: Record<string, string | boolean>): Density {
+  const d = flags.density;
+  if (typeof d === "string") {
+    if ((DENSITIES as string[]).includes(d)) return d as Density;
+    fail(`unknown density "${d}". Choose one of: ${DENSITIES.join(", ")}`);
+  }
+  return "conservative";
+}
+
+function fail(msg: string): never {
+  process.stderr.write(`pictionary: ${msg}\n`);
+  process.exit(1);
+}
+
+function fmtInt(n: number): string {
+  return n.toLocaleString("en-US");
+}
+
+// Estimate math from a file without rendering (dims computed from geometry).
+function estimateNoRender(file: string, density: Density): Estimate {
+  const text = fs.readFileSync(file, "utf8");
+  const profile = PROFILES[density];
+  const geo = geometry(profile);
+  const lines = wrapLines(text, geo.cols);
+  const pages = paginate(lines, geo.rowsPerPage);
+  const dims: PageDim[] = pages.map((pg, i) => {
+    const isLast = i === pages.length - 1;
+    const height = isLast
+      ? Math.min(PAGE_H, Math.ceil(pg.length * geo.lineHeight + 2 * MARGIN))
+      : PAGE_H;
+    return { width: PAGE_W, height };
+  });
+  return estimate(text.length, dims);
+}
+
+function printReport(file: string, density: Density, est: Estimate, files?: string[]): void {
+  const p = PROFILES[density];
+  const lines: string[] = [];
+  lines.push("");
+  lines.push(`  pictionary — ${path.basename(file)}  [${p.label}]`);
+  lines.push(`  ${"-".repeat(52)}`);
+  lines.push(`  characters      ${fmtInt(est.chars)}`);
+  lines.push(`  text tokens     ${fmtInt(est.textTokens)}   (~chars/4)`);
+  lines.push(`  pages           ${est.pages}`);
+  lines.push(`  image tokens    ${fmtInt(est.imageTokens)}   (min(w*h/750, 4784)/page)`);
+  lines.push(`  ${"-".repeat(52)}`);
+  if (est.tokensSaved > 0) {
+    lines.push(`  tokens saved    ${fmtInt(est.tokensSaved)}   (${est.ratio.toFixed(2)}x cheaper)`);
+  } else {
+    lines.push(`  tokens saved    ${fmtInt(est.tokensSaved)}   (packing this file does NOT help — too small)`);
+  }
+  lines.push("");
+  lines.push(`  $ saved per read (input pricing, 2026-07-06):`);
+  for (const [model, price] of Object.entries(PRICING_PER_MTOK)) {
+    const usd = dollarsSaved(est.tokensSaved, price);
+    lines.push(`    ${model.padEnd(12)} $${usd.toFixed(5)}`);
+  }
+  if (files && files.length) {
+    lines.push("");
+    lines.push(`  wrote ${files.length} PNG${files.length > 1 ? "s" : ""}:`);
+    for (const f of files) lines.push(`    ${f}`);
+    lines.push("");
+    lines.push(`  Next: Read the PNG(s) above instead of the text file.`);
+  }
+  lines.push("");
+  process.stdout.write(lines.join("\n") + "\n");
+}
+
+async function cmdPack(args: Args): Promise<void> {
+  const file = args.positional[0];
+  if (!file) fail("pack: missing <file>. Usage: pictionary pack <file> [--density ...] [--out dir]");
+  if (!fs.existsSync(file)) fail(`pack: file not found: ${file}`);
+  const density = resolveDensity(args.flags);
+  const outDir = typeof args.flags.out === "string" ? args.flags.out : undefined;
+
+  const res = await renderFile(file, density, outDir);
+  const est = estimate(res.totalChars, res.dims);
+  printReport(file, density, est, res.files);
+}
+
+function cmdEstimate(args: Args): void {
+  const file = args.positional[0];
+  if (!file) fail("estimate: missing <file>. Usage: pictionary estimate <file> [--density ...]");
+  if (!fs.existsSync(file)) fail(`estimate: file not found: ${file}`);
+  const density = resolveDensity(args.flags);
+  const est = estimateNoRender(file, density);
+  printReport(file, density, est);
+}
+
+function cmdInstallSkill(): void {
+  const src = path.resolve(__dirname, "..", "skill", "SKILL.md");
+  if (!fs.existsSync(src)) fail(`install-skill: bundled skill not found at ${src}`);
+  const destDir = path.join(os.homedir(), ".claude", "skills", "pictionary");
+  const dest = path.join(destDir, "SKILL.md");
+  fs.mkdirSync(destDir, { recursive: true });
+  fs.copyFileSync(src, dest);
+  process.stdout.write(`Installed pictionary skill -> ${dest}\n`);
+}
+
+function usage(): void {
+  process.stdout.write(
+    [
+      "pictionary — rasterize read-mostly text into cheap image tokens",
+      "",
+      "Usage:",
+      "  pictionary pack <file> [--density conservative|balanced|max] [--out dir]",
+      "  pictionary estimate <file> [--density ...]",
+      "  pictionary bench [--file f] [--density ...]",
+      "  pictionary install-skill",
+      "",
+      "Densities: conservative (default, near-lossless), balanced, max (lossy risk).",
+      "",
+    ].join("\n")
+  );
+}
+
+async function main(): Promise<void> {
+  const argv = process.argv.slice(2);
+  const cmd = argv[0];
+  const args = parseArgs(argv.slice(1));
+
+  switch (cmd) {
+    case "pack":
+      await cmdPack(args);
+      break;
+    case "estimate":
+      cmdEstimate(args);
+      break;
+    case "bench":
+      await runBench({
+        file: typeof args.flags.file === "string" ? args.flags.file : undefined,
+        density: resolveDensity(args.flags),
+      });
+      break;
+    case "install-skill":
+      cmdInstallSkill();
+      break;
+    case undefined:
+    case "help":
+    case "--help":
+    case "-h":
+      usage();
+      break;
+    default:
+      fail(`unknown command "${cmd}". Run 'pictionary help'.`);
+  }
+}
+
+main().catch((err) => {
+  process.stderr.write(`pictionary: ${err instanceof Error ? err.message : String(err)}\n`);
+  process.exit(1);
+});
