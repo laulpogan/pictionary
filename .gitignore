@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+
+# Rendered output from smoke tests / local runs (file.p1.png, file.p2.png, …)
+*.p[0-9]*.png

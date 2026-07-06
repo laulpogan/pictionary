@@ -1,0 +1,29 @@
+{
+  "name": "pictionary",
+  "version": "0.1.0",
+  "description": "Rasterize big read-mostly text files into dense PNGs so Claude reads them as cheap image tokens instead of expensive text tokens.",
+  "license": "MIT",
+  "type": "commonjs",
+  "bin": {
+    "pictionary": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "skill",
+    "bench"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "tsc"
+  },
+  "dependencies": {
+    "sharp": "^0.33.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/node": "^20.0.0"
+  }
+}
