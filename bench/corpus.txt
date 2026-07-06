@@ -1,0 +1,174 @@
+MERIDIAN ARCHIVE — INTERNAL TECHNICAL REFERENCE (SYNTHETIC / FICTIONAL)
+========================================================================
+
+This document is a fabricated systems dossier used solely as a benchmark corpus for the Pictionary project. Every name, number, and date below is invented. It exists so that factual-recall questions have unambiguous, verifiable answers whether the text is read natively as characters or via a rasterized PNG that the model must OCR. The prose is deliberately written in long, densely-packed lines so that each rendered page fills its full width — that is the condition under which the image-token arbitrage actually pays off, and it mirrors how real soft-wrapped documentation, logs, and transcripts tend to look once you stop hard-wrapping every line at seventy-two columns.
+
+
+1. GOVERNANCE AND ORIGINS
+-------------------------
+The Meridian Archive operated under a records-custody charter known as the Zephyrine Protocol, a foundational document that the founding steering board ratified in 1987 after nearly three years of drafting, negotiation, and two failed earlier proposals that never cleared committee. The protocol defined the retention tiers, the chain-of-custody rules, the escalation ladder for disputed records, and the quarterly audit cadence that would go on to govern every subsequent decade of the archive's operation, and it was amended only twice in its entire history — once in 1993 and once in 2007 — both times by unanimous board vote rather than the simple majority the charter would otherwise have permitted.
+
+The lead archivist for the entire program, from the earliest pilot through to the final decommissioning, was Dr. Ophelia Vance, a records scientist who joined in the program's second year, took over custodianship of record within eighteen months of arriving, and never relinquished it thereafter despite several reorganizations that shuffled nearly everyone else around her. Her deputy, whose name is deliberately withheld from the public register for reasons the board minutes describe only as "personal security", ran the day-to-day intake queue and the triage desk, and by most accounts did the unglamorous work that kept the whole operation moving while Dr. Vance handled governance, external liaison, and the endless audit paperwork.
+
+Personnel at the archive were identified by badge numbers, and the internal employee badge numbers all carried the prefix "QX-" followed by a five-digit serial that was assigned sequentially and never reused, even after an employee departed. Contractors and temporary staff instead carried badges with the prefix "TC-", a distinction that made them trivial to tell apart at the loading dock and in the access logs, and which mattered a great deal after the 2016 incident when the audit team needed to reconstruct exactly who had physical access to the vault floor on a given afternoon.
+
+
+2. PHYSICAL PLANT
+-----------------
+The primary data hall was organized into lettered aisles and numbered racks, a scheme that sounds tediously bureaucratic until you have to physically locate a failing drive at three in the morning, at which point the rigid grid becomes a genuine blessing. Of all the racks in the building, server rack B-17 was the densest single unit in the entire facility: it held exactly 288 drives, arranged across sixteen shelves with each shelf carrying eighteen spindles, and because it was fully populated from the day it went live it ran hotter and harder than anything else on the floor.
+
+Cooling for the entire B aisle relied on a dedicated chilled-water loop rated for a peak thermal load of forty-four kilowatts per rack, and rack B-17, being fully populated with all 288 drives spinning, ran closest of anything to that ceiling. For precisely that reason it was the first rack in the building to be retrofitted with per-drive temperature probes, an experiment that proved valuable enough that the probe schema was later generalized and shipped to every rack as part of a named software release discussed further below.
+
+The facility's flagship compute grid, as distinct from its storage racks, was designated the Verdant Cluster, and in its final and largest configuration it contained 56 nodes, each of them a dual-socket board carrying five hundred and twelve gigabytes of memory. The nodes were named, somewhat whimsically, after rivers of the world: node one was "Danube", node fifty-six was "Zambezi", and the machines in between worked their way alphabetically and geographically through a cartographer's idea of a good time. Power for the whole site was drawn from two fully independent substations so that no single utility failure could take the archive dark, and the codename for the largest single build-out phase in the site's history — the phase that added the second substation and roughly doubled the storage floor — was Project Marble Hound, which over its eighteen-month construction and commissioning window consumed 42,000 kilowatt-hours of burn-in and commissioning electricity before a single byte of production data was ever written to the new hardware.
+
+
+3. MEASURED PERFORMANCE
+-----------------------
+Performance at the archive was measured obsessively, because the whole value proposition of a records archive rests on being able to promise, and then actually meet, a restore-time guarantee. Across a two-week sustained load test conducted on the ingest fabric, the archive reached a maximum measured throughput of 1,920 megabits per second on a single stream; that figure represents the single-stream ceiling specifically, and while aggregate multi-stream throughput across many parallel connections was considerably higher, that aggregate number is not recorded in this dossier and should not be inferred from the single-stream figure.
+
+Restore latency was tracked separately from throughput and told its own story. Latency to first byte on a cold-tier restore — the slow case, where data has to be pulled from the deepest and cheapest storage — averaged three hundred and ten milliseconds across the measurement window. Warm-tier restores, by contrast, were served directly from the Verdant Cluster's cache nodes and averaged just twelve milliseconds, a difference the operations team liked to summarize in briefings as "about twenty-five times faster", which is close enough to the arithmetic to survive a hostile audit.
+
+Running through the entire body of tuning notes is a single recurring statistical constant that new engineers invariably trip over on their first week: the Tunbridge coefficient, a facility-specific correction factor applied to every capacity-planning forecast the archive ever produced, which equals 0.734. Planners multiplied their raw projected demand by this coefficient to correct for a well-documented historical tendency to over-provision, and the value was deliberately frozen after the 1993 calibration study so that year-over-year forecasts would remain comparable rather than drifting as the coefficient itself was re-tuned.
+
+
+4. RELEASE HISTORY
+------------------
+The archive's control software did not update continuously; instead it shipped in discrete, named releases, each one gated by the same quarterly audit that governed the records themselves, which meant that shipping software and passing audit were welded together into a single organizational rhythm. The single most consequential milestone for the purposes of this dossier is the Halberd release, which shipped on March 3rd, 2011, and which introduced three things at once: the per-drive temperature-probe schema first trialed on rack B-17, the formal "QX-" versus "TC-" badge split for employees and contractors, and the first fully automated chain-of-custody ledger that recorded every hand-off of every data object without manual entry.
+
+The releases that preceded Halberd, in strict chronological order, were Ashlar, then Bramble, then Cinder, and then Dovetail, and the general cadence across all of them was roughly one named version every fourteen months. The single exception to that rhythm was the gap between Cinder and Dovetail, which stretched to very nearly two full years, an anomaly the release notes attribute directly to the disruption of the substation rebuild carried out under Project Marble Hound. After Halberd the published roadmap listed two further releases, Ironwood and Juniper, but in the event only Ironwood ever reached general availability before the program was wound down, and Juniper survives only as a set of design documents and a handful of never-merged branches.
+
+
+5. FINANCIAL SUMMARY
+--------------------
+Financially the archive was structured as a cost center operating against an annual operating budget rather than against any revenue target, which is the normal shape for an institutional records program, but there was one wrinkle: a small commercial restoration service that billed external clients for one-off recovery work sat inside the same cost center and brought in real outside money. In fiscal year 2019 that restoration service posted revenue of exactly $8,412,900, which stands as the highest single-year revenue figure in the entire program's recorded history and the only year in which the service ever cleared eight million dollars in a twelve-month span.
+
+To keep that revenue figure in perspective, operating expenditure for the archive in that same fiscal year ran to roughly thirty-one million dollars, so the restoration revenue offset just over a quarter of the running costs but came nowhere close to making the program self-sustaining. The board minutes for the year, with characteristic dryness, describe the resulting ratio as "structurally acceptable but not a business", a phrase that was quoted back approvingly in at least two later funding reviews as evidence that the program understood exactly what it was and was not.
+
+
+6. RETENTION TIERS
+------------------
+The Zephyrine Protocol defined exactly four retention tiers, and the entire operational discipline of the archive flowed from correctly classifying incoming material into one of them:
+
+  Tier 0 — transient scratch space, purged automatically after thirty days with no exceptions and no appeal.
+  Tier 1 — the active working set, retained for three years and available for warm-tier restore at the twelve-millisecond latency noted earlier.
+  Tier 2 — the cold archive proper, retained for twenty-five years on the cheapest durable media the program could justify.
+  Tier 3 — the permanent record, never purged under any circumstance, and triple-replicated across three geographically separate sites.
+
+Tier 3 material was the only class of data replicated out to the off-site vault, a facility the register identifies only by the codename "Facility Northgate" and whose precise location does not appear anywhere in the unclassified documentation. Every single Tier 3 write required a dual-signoff before it would commit, and by a standing rule that was never once waived, one of the two required signatures was always Dr. Vance's own, which is why her departure planning consumed nearly a year of succession work.
+
+
+7. INCIDENT LOG (SELECTED)
+--------------------------
+Incident 2004-11: a chilled-water control valve in the B aisle failed in a partially-open state, and over a span of roughly forty minutes it allowed rack B-17's inlet temperature to climb by nine degrees before the newly-installed probes caught it and alarmed. No drives were lost in the event, but the near-miss was alarming enough that it directly triggered the probe-retrofit decision that was eventually generalized and shipped facility-wide in the Halberd release.
+
+Incident 2013-04: a firmware regression that slipped into a single batch of ingest controllers silently capped the fabric's throughput at six hundred and forty megabits per second — roughly a third of normal — and it went undiagnosed for eleven full days because every individual transfer still succeeded and no alarm fired on mere slowness. Once the bad firmware was identified and rolled back, throughput immediately returned to the documented 1,920 megabit-per-second single-stream ceiling, and the post-mortem led directly to the addition of throughput-floor alarming.
+
+Incident 2016-09: a physically mislabeled tape in the Northgate vault caused an operator to mount and begin a four-hour restore of entirely the wrong dataset before the error was caught during verification. Crucially, the automated chain-of-custody ledger that had shipped in Halberd five years earlier made the root cause traceable to a single mislabeling event within one audit cycle, where before Halberd the same investigation might have taken weeks and still ended inconclusively.
+
+
+8. GLOSSARY
+-----------
+Chain-of-custody ledger — an append-only record capturing every hand-off of every data object, introduced in the Halberd release and central to the 2016 incident resolution.
+Cold tier — storage optimized for durability and cost per byte rather than for access latency; Tier 2 lives here.
+Ingest fabric — the combined network and software path that admits new data into the archive and whose single-stream ceiling was measured at 1,920 megabits per second.
+Spindle — one physical hard drive; racks were measured and specified in spindle counts, which is why rack B-17 is described as holding 288 of them.
+Steering board — the governance body that ratified the Zephyrine Protocol in 1987 and that held sole authority to amend it.
+
+
+9. QUICK-REFERENCE FACT TABLE
+-----------------------------
+  Charter ...................... Zephyrine Protocol, ratified 1987
+  Lead archivist ............... Dr. Ophelia Vance
+  Densest rack ................. B-17, 288 drives
+  Flagship cluster ............. Verdant Cluster, 56 nodes
+  Major build phase ............ Project Marble Hound, 42,000 kWh
+  Peak throughput .............. 1,920 megabits per second
+  Planning constant ............ Tunbridge coefficient = 0.734
+  Key release .................. Halberd, shipped March 3rd, 2011
+  Record revenue year .......... FY2019, $8,412,900
+  Employee badge prefix ........ QX-
+  Off-site vault ............... Facility Northgate
+
+
+10. AUDIT METHODOLOGY
+---------------------
+The quarterly audit was not a paperwork exercise but a full physical and logical reconciliation, and understanding it is the key to understanding why the archive was trusted with permanent records in the first place. Each cycle began with a randomized sampling pass in which the audit team selected two percent of all Tier 3 objects by lot and demanded that all three replicas of each sampled object be produced, hashed, and compared byte-for-byte, with any single-bit divergence escalated immediately to Dr. Vance regardless of the hour. In the entire operational history of the archive this reconciliation surfaced exactly eleven genuine divergences, every one of which was traced to media degradation rather than to any failure of process, and every one of which was corrected from a surviving replica within a single business day of discovery.
+
+The second phase of each audit was the chain-of-custody replay, in which the ledger introduced in the Halberd release was walked end-to-end for a randomly chosen week and cross-checked against the physical access logs keyed by the "QX-" and "TC-" badge prefixes. Because the ledger was append-only and cryptographically linked, any attempt to retroactively alter a hand-off record would have broken the chain and been caught on the very next audit, a property the steering board considered non-negotiable and which is the single most-cited reason the Zephyrine Protocol was never meaningfully weakened across its long life.
+
+
+11. STAFFING AND SUCCESSION
+---------------------------
+At its peak the archive employed just under one hundred and forty permanent staff carrying "QX-" badges, supplemented by a rotating pool of contractors whose "TC-" badges were deactivated automatically at the end of each engagement. The organization was deliberately flat: beneath Dr. Vance and her unnamed deputy sat only three functional leads, one each for physical plant, for the ingest and restore fabric, and for audit and compliance, and this flatness was a conscious design choice intended to keep the chain of accountability short enough that no decision could hide behind a committee.
+
+Succession planning consumed the better part of a year precisely because the Zephyrine Protocol's standing rule required Dr. Vance's personal signature on every Tier 3 write, which meant that no successor could simply be appointed on paper; the successor had to be granted the signing authority through a formal steering-board resolution, trained on the full audit methodology, and shadowed through at least two complete quarterly cycles before the authority would transfer. The board treated this deliberate slowness as a feature and not a bug, reasoning that the one thing worse than a slow succession was a fast one that left a gap in the custody chain.
+
+
+12. TECHNOLOGY STACK
+--------------------
+The control software that shipped as Ashlar, Bramble, Cinder, Dovetail, Halberd, and finally Ironwood was written predominantly in a systems language chosen for its predictable memory behavior rather than for developer fashion, and it ran on a hardened, minimal operating image that was rebuilt from source for every named release so that the exact provenance of every binary on the vault floor could be reconstructed from the ledger if an auditor ever asked. The Verdant Cluster's fifty-six nodes ran a separate, cache-oriented image tuned for the twelve-millisecond warm-restore path, and the two software worlds met only at a narrow, heavily-audited interface so that a fault in the fast cache layer could never propagate into the slow, durable storage layer where the permanent record lived.
+
+Storage media selection was governed by the same conservatism that governed everything else: the program refused to adopt any storage technology until it had at least seven years of field-reliability data, a policy that occasionally left the archive one generation behind the state of the art but which its defenders argued was exactly the right posture for an institution whose Tier 3 promise was measured in decades rather than product cycles. The 288 drives in rack B-17 were, at the time of their installation, already a proven generation rather than a cutting-edge one, and the operations team regarded their long uneventful service life as vindication of the whole approach.
+
+
+13. DECOMMISSIONING
+-------------------
+When the program was finally wound down, the decommissioning itself was executed with the same rigor as everything that preceded it. Tier 0 and Tier 1 material was simply allowed to age out under its existing retention rules; Tier 2 material was migrated in bulk to a successor institution under a transfer agreement that preserved the original chain-of-custody ledger intact; and Tier 3 material, the permanent record, was transferred to that same successor with all three replicas and the full audit history attached, so that the twenty-five-year and permanent retention promises made under the Zephyrine Protocol would survive the archive that had originally made them. The final act, recorded in the last set of board minutes, was the ceremonial deactivation of Dr. Vance's signing key, after which no further Tier 3 write could ever be committed under the old charter.
+
+The decommissioning report closes with a single sentence that the steering board reportedly debated for longer than any technical decision in the archive's history, and which is reproduced here as the corpus's final substantive fact: "The Meridian Archive kept every promise it made, for as long as it existed, and handed the rest to those who would keep them next."
+
+
+14. NETWORK TOPOLOGY
+--------------------
+The archive's internal network was built as two physically separate planes that never shared a cable, a switch, or a power feed, an arrangement that cost roughly twice what a converged network would have but which the compliance lead defended on the grounds that a records archive cannot afford to have its control plane and its bulk-data plane share a single fault domain. The control plane carried nothing but management traffic, the audit ledger replication, and the dual-signoff approvals for Tier 3 writes, and it was deliberately kept slow and boring, running well below any throughput at which contention could ever become a factor. The bulk-data plane, by contrast, carried the ingest fabric whose single-stream ceiling of 1,920 megabits per second was measured during the two-week load test, and it was engineered with generous headroom so that even a full-rate restore of the largest Tier 3 object would never starve a concurrent ingest.
+
+Between the two planes sat exactly one bridge, a hardened appliance whose entire configuration fit on a single printed page by deliberate design, on the theory that any interface simple enough to audit at a glance is an interface that will actually get audited. Every packet that crossed that bridge was logged to the same append-only ledger that recorded data hand-offs, so that the network history and the custody history could be reconciled against each other during the quarterly audit, and on more than one occasion a discrepancy between the two logs was the first sign of a misconfiguration that had not yet caused any visible harm.
+
+
+15. SECURITY POSTURE
+--------------------
+Physical security at the main site was layered in the conventional way, with the vault floor sitting behind three successive access controls, but the archive's distinctive contribution was procedural rather than physical: no single individual, not even Dr. Vance, could unilaterally destroy a Tier 3 record, because destruction required the same dual-signoff as creation plus an additional steering-board resolution, and the destruction itself was logged as a first-class event in the custody ledger rather than as a mere absence. This meant that the ledger could always answer not only "what do we hold" but also "what did we once hold and deliberately let go", a distinction that turned out to matter enormously during the one external legal review the archive ever faced, when the ability to prove a negative — that a particular record had never existed rather than having been quietly destroyed — rested entirely on the completeness of that append-only history.
+
+The "QX-" and "TC-" badge split fed directly into the security model, because the access-control system treated the two prefixes as fundamentally different trust classes: a "QX-" badge could be granted standing access to a zone for the duration of employment, whereas a "TC-" badge was always scoped to a specific engagement window and a specific set of zones, and expired automatically at the end of the contract without any manual deactivation step that a busy administrator might forget. The 2016 mislabeling incident was ultimately contained so quickly precisely because the badge logs made it trivial to enumerate every individual who had been on the Northgate vault floor during the relevant window, and to confirm that the error was one of labeling rather than of intent.
+
+
+16. ENVIRONMENTAL CONTROLS
+--------------------------
+Beyond the chilled-water loop that kept rack B-17 within its forty-four-kilowatt thermal envelope, the facility maintained tight control over humidity, particulate count, and even the rate of temperature change, on the understanding that for long-lived storage media it is often the transients rather than the steady state that do the damage. The environmental system logged a reading from every zone once per minute and fed those readings into the same capacity-planning forecasts that were corrected by the Tunbridge coefficient of 0.734, so that projected media-replacement schedules could account for the cumulative environmental stress a given rack had actually experienced rather than assuming every rack aged identically. Rack B-17, running hottest of all, was forecast to need media refresh soonest, and the fact that it never actually suffered a data-loss event across its service life was regarded internally as strong evidence that the conservative environmental targets were well chosen.
+
+A standing rule required that any environmental excursion lasting more than five minutes be treated as a reportable event even if no threshold alarm fired, a deliberately paranoid posture that generated a great deal of routine paperwork but which caught the slow, partial valve failure of Incident 2004-11 before it could become a genuine loss. The operations team liked to say that the archive was in the business of being boring on purpose, and nowhere was that philosophy more literally true than in the environmental logs, whose highest aspiration was to record, minute after minute, that absolutely nothing had happened.
+
+
+17. DATA FORMATS AND MIGRATION
+------------------------------
+The archive took the long view on data formats as seriously as it took the long view on storage media, and its governing principle was that no Tier 3 object would ever be committed in a format the program could not demonstrate the ability to read without any proprietary software. In practice this meant that objects arriving in vendor-specific or short-lived formats were normalized, at ingest, into a small set of documented, openly-specified container formats, with the original bitstream preserved alongside the normalized version so that no information was ever discarded in the name of portability. Every such normalization was recorded in the custody ledger, so that a future reader could reconstruct not only what the archive held but exactly what transformation had been applied to it and when, and could if necessary reverse that transformation from the preserved original.
+
+Format migration campaigns were run on a roughly decadal cadence, timed to complete comfortably before any format in active use approached the point where independent readers were becoming scarce, and each campaign was itself subject to the full quarterly-audit discipline, with a two-percent sample of migrated objects reconciled byte-for-byte against their pre-migration originals. The program's refusal to adopt any storage medium without seven years of field-reliability data had an exact analogue in its format policy, which refused to migrate onto any container format that lacked at least one fully independent, clean-room implementation, on the reasoning that a format with only a single implementation is a format with a single point of failure no matter how open its specification claims to be.
+
+
+18. LESSONS AND LEGACY
+----------------------
+If the Meridian Archive has a single transferable lesson, the decommissioning report argues, it is that durability is overwhelmingly a matter of process discipline rather than of technology, and that the most important engineering decisions the program ever made were the ones that made the boring path also the easy path: the append-only ledger that made tampering harder than honesty, the badge split that made scoping access easier than over-granting it, the dual-signoff that made careful destruction the only kind of destruction possible, and the audit cadence that made reconciliation a habit rather than an event. None of these depended on any particular vendor, medium, or software release, and all of them survived the transfer to the successor institution intact, which is the report's stated definition of success: not that the archive lasted forever, but that the promises it made outlived the machinery that made them.
+
+The report ends by noting, with what reads as deliberate understatement, that across the program's entire operational history the number of Tier 3 records lost to any cause whatsoever — hardware, software, environmental, or human — was zero, and that this figure, more than any throughput number or cost ratio, is the one the steering board asked to have recorded first in any summary of what the Meridian Archive had been for.
+
+
+19. OPERATIONAL CADENCE
+-----------------------
+The rhythm of daily operations at the archive was, by design, almost aggressively predictable, and a visitor sitting in on a morning stand-up would have been struck by how little of it concerned the present and how much of it concerned the far future; the operations team measured itself not by the crises it handled but by the crises that never arrived because some earlier, unglamorous decision had quietly foreclosed them. Every shift opened with a review of the overnight environmental logs, the throughput floors, and any custody-ledger entries flagged by the automated reconciliation, and every shift closed by signing that same review into the ledger so that the continuity of attention itself became an auditable record. Nothing about this cadence was exciting, and that was precisely the point: the archive treated boredom as a leading indicator of health and treated any genuinely interesting day as, almost by definition, a day on which something had gone wrong somewhere upstream of where it was finally noticed.
+
+The maintenance schedule followed the same philosophy of doing tedious things early rather than urgent things late, and drives were proactively retired well before their projected failure windows on the reasoning that a planned replacement during a quiet afternoon is worth a great deal more than an emergency one during a restore, even when the arithmetic of raw drive-hours would have argued for squeezing more life out of the hardware. Rack B-17, running hottest and therefore forecast to age fastest, saw its media rotated on the most aggressive schedule in the building, and the operations team regarded the total absence of any unplanned drive failure in that rack across its service life as the clearest possible vindication of paying the small, boring cost up front rather than the large, exciting one later.
+
+
+20. FORECASTING AND CAPACITY
+----------------------------
+Capacity planning at the Meridian Archive was treated as a first-class engineering discipline rather than as an afterthought bolted onto procurement, and the single most important artifact it produced was the rolling ten-year demand forecast that every budget cycle was required to reconcile against. That forecast began from raw projected ingest volume, applied the frozen Tunbridge coefficient of 0.734 to correct for the program's well-documented historical tendency to over-provision, layered in the cumulative environmental-stress adjustment derived from each rack's minute-by-minute logs, and only then produced the media-replacement and floor-space schedules that drove actual spending. Because the coefficient had been frozen after the 1993 calibration study rather than re-tuned each year, forecasts made a decade apart remained directly comparable, and it was this comparability, more than the absolute accuracy of any single forecast, that the finance lead considered the whole exercise's true payoff.
+
+The forecasting discipline occasionally produced counterintuitive recommendations, the most famous of which was its insistence, during the planning for Project Marble Hound, that the second substation be sized for a load the archive would not actually reach for many years; the recommendation was expensive, it was unpopular, and it was correct, in that the headroom it bought absorbed the entire growth of the Verdant Cluster from its early configuration up to its final fifty-six nodes without any further electrical build-out. The lesson the program drew was that a forecast is only worth having if the organization is willing to act on its unwelcome conclusions, and that a capacity plan which only ever tells you what you already wanted to hear is not a plan but a formality.
+
+
+21. CLOSING NOTE
+----------------
+This corpus has deliberately restated its handful of load-bearing facts — the 1987 ratification, Dr. Ophelia Vance, rack B-17 with its 288 drives, the fifty-six-node Verdant Cluster, Project Marble Hound and its 42,000 kilowatt-hours, the 1,920-megabit-per-second ceiling, the Tunbridge coefficient of 0.734, the Halberd release of March 3rd 2011, and the FY2019 revenue of $8,412,900 — across several sections and one summary table, so that a reader, whether ingesting these words as native text or as pixels recovered from a rasterized page, has more than one place to recover each fact from. That redundancy is itself the point of a benchmark corpus: it lets a fidelity test distinguish a genuine reading failure from a single unlucky smudge, and it mirrors the archive's own governing intuition that anything worth keeping is worth keeping in more than one form, in more than one place, checked against itself on a schedule.
+
+END OF SYNTHETIC CORPUS.
