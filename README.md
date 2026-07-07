@@ -60,8 +60,8 @@ page holds only ~16k chars, below the 19,136 break-even — which is why
 (2) These are *full-page* numbers. Real files rarely fill every line to the
 right edge (headers, blank lines, short list items, ragged paragraph wraps), and
 at a typical ~55% line-fill only `max` reliably beats text; `balanced` and
-`conservative` can break even or lose. **Always run `pictionary estimate` first**
-— it tells you, for your actual file, whether packing helps.
+`conservative` can break even or lose. **Always run `pictionary pack --dry-run`
+first** — it tells you, for your actual file, whether packing helps.
 
 Pages are sized to land in the billing sweet spot — long edge ≤2576px, area
 ≤3.75MP — so **no silent downscale ever occurs**. Long inputs paginate into
@@ -82,7 +82,7 @@ conversation).
 
 ```
 # See the math without rendering or spending anything:
-pictionary estimate bigfile.log --density balanced
+pictionary pack bigfile.log --density balanced --dry-run
 
 # Pack it — writes bigfile.log.p1.png, .p2.png, … and prints a savings report:
 pictionary pack bigfile.log --density balanced
@@ -92,11 +92,11 @@ pictionary pack bigfile.log --density balanced
 
 Subcommands:
 
-- `pictionary pack <file> [--density …] [--out dir] [--temperature 0..1]` —
-  render + savings report (see **Analog temperature** below).
-- `pictionary estimate <file> [--density …]` — the math only, no render.
-- `pictionary bench [--file f] [--density …]` — measure the savings *and* the
-  fidelity tax against a real corpus via `claude -p` (see below).
+- `pictionary pack <file> [--density …] [--out dir] [--temperature 0..1] [--dry-run]`
+  — render + savings report (see **Analog temperature** below). `--dry-run` prints
+  the token math without rendering, so you can confirm packing helps first.
+- `pictionary bench [--file f] [--density …]` — measure whether analog temperature
+  actually moves the model's output, against a real corpus via `claude -p` (see below).
 - `pictionary install-skill` — install the Claude Code skill.
 
 ## Density — honest fidelity labels
@@ -110,7 +110,7 @@ Subcommands:
 Denser font = more savings = more misread risk. **The default is `conservative`
 (safest fidelity), but it is a *fidelity* mode, not a *savings* mode** — on most
 real files it barely breaks even. If your goal is fewer tokens, reach for
-`balanced` or `max` and let `pictionary estimate` confirm the win.
+`balanced` or `max` and let `pictionary pack --dry-run` confirm the win.
 
 ## Caveats (documented, not hidden)
 

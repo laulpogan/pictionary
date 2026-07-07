@@ -1,12 +1,19 @@
-// bench.ts — proves the arbitrage + measures the fidelity tax, via the `claude`
-// CLI (claude -p) over the user's existing OAuth login. No API key, no SDK.
+// bench.ts — measures whether ANALOG TEMPERATURE actually moves the model's
+// output, via the `claude` CLI (claude -p) over the user's existing OAuth login.
+// No API key, no SDK.
 //
-// For each factual question we ask Claude two ways:
-//   (a) TEXT   — the corpus pasted into the prompt.
-//   (b) IMAGE  — the corpus packed to PNG(s); the prompt points at the paths and
-//                lets Claude's Read tool ingest them as images.
-// We compare answers against expected substrings and report per-mode accuracy +
-// measured input-token usage from --output-format json.
+// The experiment: render the SAME prompt K times at each temperature level, ask
+// Claude to read each rendered PNG, and measure how much the K answers differ.
+//
+//   t = 0   -> pristine PNG: identical pixels every render, so the only variation
+//              is the model's own internal sampling. This is the baseline.
+//   t > 0   -> fresh random jitter + grain PER render, so each of the K runs reads
+//              a DIFFERENT smudged image. If smudging supplies sampling randomness,
+//              output diversity should climb above the t=0 baseline.
+//
+// Diversity metric: mean pairwise normalized Levenshtein distance across the K
+// answers (0 = all identical, 1 = maximally different). Structural, dependency-free,
+// and not gameable by string-matching a known phrase.
 
 import * as fs from "fs";
 import * as os from "os";
@@ -14,36 +21,27 @@ import * as path from "path";
 import { spawnSync } from "child_process";
 import { renderFile, Density } from "./render";
 
-interface QA {
-  q: string;
-  // Answer counts as correct if ANY of these substrings appears (case-insensitive,
-  // commas stripped) in the model's answer.
-  expect: string[];
-}
-
-// Q&A over the bundled corpus. Keep in sync with bench/corpus.txt facts.
-const QUESTIONS: QA[] = [
-  { q: "In what year was the Zephyrine Protocol ratified?", expect: ["1987"] },
-  { q: "Who was the lead archivist of the project?", expect: ["Vance", "Ophelia"] },
-  { q: "How many drives did server rack B-17 hold?", expect: ["288"] },
-  { q: "What is the numeric value of the Tunbridge coefficient?", expect: ["0.734"] },
-  { q: "How many nodes were in the Verdant Cluster?", expect: ["56"] },
-  { q: "What was the maximum measured throughput in megabits per second?", expect: ["1920"] },
-  { q: "What was the fiscal year 2019 revenue in dollars?", expect: ["8412900", "8,412,900"] },
-  { q: "On what date did the Halberd release ship?", expect: ["March 3", "2011"] },
+// Temperature levels swept. Labels mirror the CLI's temperatureLabel() regimes.
+const LEVELS: { t: number; regime: string }[] = [
+  { t: 0, regime: "pristine scan (baseline)" },
+  { t: 0.4, regime: "office photocopier" },
+  { t: 0.8, regime: "fax machine" },
 ];
+
+// Open-ended by design: a creative completion has a wide output distribution, so
+// added input noise has room to show up as answer diversity. A closed factual
+// question would pin every run to the same token and hide the effect.
+const DEFAULT_PROMPT =
+  "Write a single vivid opening sentence for a mystery novel set in a lighthouse. " +
+  "Reply with only the sentence.";
 
 function claudeAvailable(): boolean {
   const r = spawnSync("claude", ["--version"], { encoding: "utf8" });
   return r.status === 0;
 }
 
-interface AskResult {
-  answer: string;
-  inputTokens: number | null;
-}
-
-function ask(prompt: string, extraArgs: string[]): AskResult | null {
+// One claude -p call. Returns the model's text answer, or null on failure.
+function ask(prompt: string, extraArgs: string[]): string | null {
   const r = spawnSync("claude", ["-p", prompt, "--output-format", "json", ...extraArgs], {
     encoding: "utf8",
     maxBuffer: 32 * 1024 * 1024,
@@ -51,38 +49,63 @@ function ask(prompt: string, extraArgs: string[]): AskResult | null {
   if (r.status !== 0 || !r.stdout) return null;
   try {
     const obj = JSON.parse(r.stdout);
-    const answer: string = typeof obj.result === "string" ? obj.result : "";
-    const usage = obj.usage || {};
-    const inTok =
-      typeof usage.input_tokens === "number"
-        ? usage.input_tokens +
-          (usage.cache_read_input_tokens || 0) +
-          (usage.cache_creation_input_tokens || 0)
-        : null;
-    return { answer, inputTokens: inTok };
+    return typeof obj.result === "string" ? obj.result.trim() : null;
   } catch {
     return null;
   }
 }
 
-function correct(answer: string, qa: QA): boolean {
-  const norm = answer.toLowerCase().replace(/,/g, "");
-  return qa.expect.some((e) => norm.includes(e.toLowerCase().replace(/,/g, "")));
+// Levenshtein edit distance (iterative DP, two rows). Dependency-free.
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  let curr = new Array<number>(b.length + 1);
+  for (let i = 1; i <= a.length; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+    }
+    [prev, curr] = [curr, prev];
+  }
+  return prev[b.length];
+}
+
+// Mean pairwise Levenshtein distance, normalized to [0,1] by the longer string of
+// each pair. 0 = every answer identical; higher = more diverse. Null if <2 answers.
+function meanPairwiseDistance(answers: string[]): number | null {
+  const valid = answers.filter((a) => a.length > 0);
+  if (valid.length < 2) return null;
+  let sum = 0;
+  let pairs = 0;
+  for (let i = 0; i < valid.length; i++) {
+    for (let j = i + 1; j < valid.length; j++) {
+      const denom = Math.max(valid[i].length, valid[j].length) || 1;
+      sum += levenshtein(valid[i], valid[j]) / denom;
+      pairs++;
+    }
+  }
+  return pairs ? sum / pairs : null;
 }
 
 export interface BenchOpts {
-  file?: string;
+  // Optional path to a prompt file (its contents become the prompt). Falls back to
+  // the built-in creative prompt when absent.
+  promptFile?: string;
   density: Density;
+  runs: number;
+}
+
+interface LevelResult {
+  t: number;
+  regime: string;
+  answers: string[];
+  distance: number | null;
 }
 
 export async function runBench(opts: BenchOpts): Promise<void> {
-  const corpus =
-    opts.file ?? path.resolve(__dirname, "..", "bench", "corpus.txt");
-  if (!fs.existsSync(corpus)) {
-    process.stderr.write(`pictionary bench: corpus not found: ${corpus}\n`);
-    process.exit(1);
-  }
-
   if (!claudeAvailable()) {
     process.stderr.write(
       "pictionary bench: the `claude` CLI was not found on PATH.\n" +
@@ -92,95 +115,98 @@ export async function runBench(opts: BenchOpts): Promise<void> {
     process.exit(1);
   }
 
-  const corpusText = fs.readFileSync(corpus, "utf8");
+  const prompt =
+    opts.promptFile && fs.existsSync(opts.promptFile)
+      ? fs.readFileSync(opts.promptFile, "utf8").trim()
+      : DEFAULT_PROMPT;
+  const runs = Math.max(2, opts.runs); // need >=2 answers per level to measure spread
 
-  // Pack once for the image arm.
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "pictionary-bench-"));
-  const res = await renderFile(corpus, opts.density, tmpDir);
-  const pngList = res.files.join(", ");
+  // Write the prompt to a temp text file so renderFile (which reads a path) can
+  // rasterize it at each temperature.
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "pictionary-tempbench-"));
+  const promptTxt = path.join(tmpDir, "prompt.txt");
+  fs.writeFileSync(promptTxt, prompt, "utf8");
 
   process.stderr.write(
-    `Running bench: ${QUESTIONS.length} questions x 2 modes via claude -p (density=${opts.density})...\n`
+    `Running temperature bench: ${LEVELS.length} levels x ${runs} runs via claude -p ` +
+      `(density=${opts.density})...\n`
   );
 
-  let textCorrect = 0;
-  let imgCorrect = 0;
-  let textTokTotal = 0;
-  let imgTokTotal = 0;
-  let textTokN = 0;
-  let imgTokN = 0;
-
-  interface Row {
-    q: string;
-    textOk: boolean;
-    imgOk: boolean;
-    textTok: number | null;
-    imgTok: number | null;
-  }
-  const rows: Row[] = [];
-
-  for (const qa of QUESTIONS) {
-    const textPrompt =
-      `Answer this question using ONLY the document below. Reply with just the answer.\n\n` +
-      `Question: ${qa.q}\n\nDocument:\n${corpusText}`;
-    const imgPrompt =
-      `Answer this question using ONLY the document contained in these image file(s): ${pngList}\n` +
-      `Read the image file(s), then reply with just the answer.\n\nQuestion: ${qa.q}`;
-
-    const textRes = ask(textPrompt, []);
-    const imgRes = ask(imgPrompt, ["--allowedTools", "Read"]);
-
-    const textOk = textRes ? correct(textRes.answer, qa) : false;
-    const imgOk = imgRes ? correct(imgRes.answer, qa) : false;
-    if (textOk) textCorrect++;
-    if (imgOk) imgCorrect++;
-    if (textRes?.inputTokens != null) {
-      textTokTotal += textRes.inputTokens;
-      textTokN++;
+  const results: LevelResult[] = [];
+  for (const level of LEVELS) {
+    const answers: string[] = [];
+    for (let run = 0; run < runs; run++) {
+      // Fresh render every run: at t>0 each carries independent jitter+grain, which
+      // is the whole point — the randomness lives in the pixels, not the API call.
+      const outDir = path.join(tmpDir, `t${level.t}-r${run}`);
+      const res = await renderFile(promptTxt, opts.density, outDir, level.t);
+      const pngList = res.files.join(", ");
+      const imgPrompt =
+        `Read the prompt contained in these image file(s): ${pngList}\n` +
+        `Then do exactly what the prompt says. Reply with only your answer.`;
+      const ans = ask(imgPrompt, ["--allowedTools", "Read"]);
+      if (ans) answers.push(ans);
+      process.stderr.write(`  t=${level.t} run ${run + 1}/${runs} ${ans ? "ok" : "FAILED"}\n`);
     }
-    if (imgRes?.inputTokens != null) {
-      imgTokTotal += imgRes.inputTokens;
-      imgTokN++;
-    }
-    rows.push({
-      q: qa.q,
-      textOk,
-      imgOk,
-      textTok: textRes?.inputTokens ?? null,
-      imgTok: imgRes?.inputTokens ?? null,
+    results.push({
+      t: level.t,
+      regime: level.regime,
+      answers,
+      distance: meanPairwiseDistance(answers),
     });
   }
 
-  const n = QUESTIONS.length;
-  const tok = (v: number | null) => (v == null ? "n/a" : v.toLocaleString("en-US"));
+  const baseline = results.find((r) => r.t === 0)?.distance ?? null;
+  const dist = (d: number | null) => (d == null ? "n/a" : d.toFixed(3));
 
   const out: string[] = [];
   out.push("");
-  out.push(`## Benchmark results (density: ${opts.density})`);
+  out.push(`## Analog temperature bench (density: ${opts.density}, ${runs} runs/level)`);
   out.push("");
-  out.push(`Corpus: \`${path.basename(corpus)}\` — packed to ${res.pages} PNG page(s).`);
+  out.push(`Prompt: _${prompt.length > 80 ? prompt.slice(0, 79) + "…" : prompt}_`);
   out.push("");
-  out.push("| Question | Text ✓ | Image ✓ | Text in-tok | Image in-tok |");
-  out.push("|---|:--:|:--:|--:|--:|");
-  for (const r of rows) {
-    const shortQ = r.q.length > 46 ? r.q.slice(0, 45) + "…" : r.q;
-    out.push(
-      `| ${shortQ} | ${r.textOk ? "✓" : "✗"} | ${r.imgOk ? "✓" : "✗"} | ${tok(r.textTok)} | ${tok(r.imgTok)} |`
-    );
+  out.push("| Temperature | Regime | Runs | Output diversity | vs. baseline |");
+  out.push("|--:|---|:--:|--:|--:|");
+  for (const r of results) {
+    let vs = "—";
+    if (r.t !== 0 && r.distance != null && baseline != null && baseline > 0) {
+      vs = `${(r.distance / baseline).toFixed(2)}x`;
+    } else if (r.t !== 0 && r.distance != null && baseline === 0) {
+      vs = r.distance > 0 ? "∞ (baseline 0)" : "—";
+    }
+    out.push(`| ${r.t.toFixed(1)} | ${r.regime} | ${r.answers.length} | ${dist(r.distance)} | ${vs} |`);
   }
-  out.push(`| **Accuracy** | **${textCorrect}/${n}** | **${imgCorrect}/${n}** | | |`);
-  const avgText = textTokN ? Math.round(textTokTotal / textTokN) : null;
-  const avgImg = imgTokN ? Math.round(imgTokTotal / imgTokN) : null;
-  out.push(`| **Avg input tokens** | | | ${tok(avgText)} | ${tok(avgImg)} |`);
   out.push("");
-  if (avgText != null && avgImg != null && avgImg > 0) {
-    out.push(`Token ratio (text/image): ${(avgText / avgImg).toFixed(2)}x`);
-    out.push("");
+
+  // Honest verdict — report a null result plainly if smudging did nothing.
+  const hot = results.find((r) => r.t === 0.8)?.distance ?? null;
+  if (baseline != null && hot != null) {
+    if (baseline > 0 && hot > baseline * 1.15) {
+      out.push(
+        `> Verdict: smudging works. At t=0.8 the model's output was ` +
+          `${(hot / baseline).toFixed(2)}x more varied than the pristine baseline — ` +
+          `the analog sampling knob measurably moves the distribution.`
+      );
+    } else if (baseline === 0 && hot > 0) {
+      out.push(
+        `> Verdict: smudging works. The pristine baseline produced identical outputs ` +
+          `(diversity 0); smudging alone introduced variation.`
+      );
+    } else {
+      out.push(
+        `> Verdict: no measurable effect. Output diversity at t=0.8 (${dist(hot)}) did not ` +
+          `clearly exceed the pristine baseline (${dist(baseline)}). The model's own sampling ` +
+          `dominates; the smudge is (this run) cosmetic. Reported honestly.`
+      );
+    }
+  } else {
+    out.push(`> Verdict: inconclusive — too few successful runs to measure. Check the \`claude\` CLI.`);
   }
+  out.push("");
   out.push(
-    "> Note: input-token counts include Claude Code's system prompt + tool overhead, " +
-      "so per-question totals are higher than the raw corpus tokens. The delta between " +
-      "the text and image columns is the arbitrage; the ✓ columns are the fidelity tax."
+    "> Metric: mean pairwise normalized Levenshtein distance across the runs at each " +
+      "level (0 = identical, higher = more diverse). t=0 renders identical pixels every " +
+      "run, so its diversity is pure model sampling; t>0 adds fresh per-render noise."
   );
   out.push("");
 

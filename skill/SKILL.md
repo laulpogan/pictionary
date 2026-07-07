@@ -21,7 +21,7 @@ read-mostly file into PNG(s) can cut the cost of reading it by ~2–5x.
 
 1. **Big** — the file is roughly >8,000 tokens (>~32,000 characters). Small files
    don't beat the per-image floor; packing them can cost *more*. Check first with
-   `pictionary estimate <file>` — if "tokens saved" is not clearly positive, don't.
+   `pictionary pack <file> --dry-run` — if "tokens saved" is not clearly positive, don't.
 2. **Read-mostly** — you will read it for facts/context, not edit it: docs,
    logs, transcripts, dumps, changelogs, exports, meeting notes.
 3. **Fidelity-tolerant** — approximate OCR of the content is acceptable. Exact
@@ -44,7 +44,7 @@ code. Pack the boring bulk; keep the load-bearing text as text.
 1. Estimate first (no render, no cost):
 
    ```
-   pictionary estimate <file> --density balanced
+   pictionary pack <file> --density balanced --dry-run
    ```
 
    Only proceed if "tokens saved" is clearly positive.
@@ -64,7 +64,7 @@ code. Pack the boring bulk; keep the load-bearing text as text.
 ## Density knob
 
 Best-case ratios below are for a *full, densely-packed* page (see README table);
-real files rarely fill every line, so `pictionary estimate` is the source of truth.
+real files rarely fill every line, so `pictionary pack --dry-run` is the source of truth.
 
 - `conservative` (~14px, near-lossless, ~1.05x best case — often break-even/loss)
   — **default**. A *fidelity* mode, not a *savings* mode: use it when the content
@@ -88,7 +88,7 @@ overhead can equal or exceed the raw image-token saving, so on small/medium file
 packing can make the whole request **more expensive** end-to-end, not cheaper.
 The arbitrage is real per-image but is easily erased by the round-trip. Only pack
 genuinely **big** files (comfortably >8k text tokens) so the saved bulk dwarfs the
-extra-turn tax, and trust `pictionary estimate` for the raw math — not the
+extra-turn tax, and trust `pictionary pack --dry-run` for the raw math — not the
 end-to-end request cost, which includes that overhead.
 
 ## Caveats

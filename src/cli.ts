@@ -126,9 +126,19 @@ function printReport(file: string, density: Density, est: Estimate, files?: stri
 
 async function cmdPack(args: Args): Promise<void> {
   const file = args.positional[0];
-  if (!file) fail("pack: missing <file>. Usage: pictionary pack <file> [--density ...] [--out dir]");
+  if (!file) fail("pack: missing <file>. Usage: pictionary pack <file> [--density ...] [--out dir] [--dry-run]");
   if (!fs.existsSync(file)) fail(`pack: file not found: ${file}`);
   const density = resolveDensity(args.flags);
+  const dryRun = args.flags["dry-run"] === true || args.flags["dry-run"] === "true";
+
+  // --dry-run: show the same math without rendering or writing any PNGs. This is
+  // the guard — run it to confirm "tokens saved" is positive before you pack.
+  if (dryRun) {
+    const est = estimateNoRender(file, density);
+    printReport(file, density, est);
+    return;
+  }
+
   const outDir = typeof args.flags.out === "string" ? args.flags.out : undefined;
   const temperature = resolveTemperature(args.flags);
 
@@ -138,15 +148,6 @@ async function cmdPack(args: Args): Promise<void> {
     process.stdout.write(`\n  analog temperature ${temperature} — ${temperatureLabel(temperature)}\n`);
   }
   printReport(file, density, est, res.files);
-}
-
-function cmdEstimate(args: Args): void {
-  const file = args.positional[0];
-  if (!file) fail("estimate: missing <file>. Usage: pictionary estimate <file> [--density ...]");
-  if (!fs.existsSync(file)) fail(`estimate: file not found: ${file}`);
-  const density = resolveDensity(args.flags);
-  const est = estimateNoRender(file, density);
-  printReport(file, density, est);
 }
 
 function cmdInstallSkill(): void {
@@ -165,12 +166,12 @@ function usage(): void {
       "pictionary — rasterize read-mostly text into cheap image tokens",
       "",
       "Usage:",
-      "  pictionary pack <file> [--density conservative|balanced|max] [--out dir] [--temperature 0..1]",
-      "  pictionary estimate <file> [--density ...]",
-      "  pictionary bench [--file f] [--density ...]",
+      "  pictionary pack <file> [--density conservative|balanced|max] [--out dir] [--temperature 0..1] [--dry-run]",
+      "  pictionary bench [--prompt-file f] [--runs N] [--density ...]",
       "  pictionary install-skill",
       "",
       "Densities: conservative (default, near-lossless), balanced, max (lossy risk).",
+      "--dry-run: print the token math without rendering — run it first to confirm packing helps.",
       "Temperature: 0 pristine scan -> 1 photocopy of a fax of a photocopy.",
       "  (Anthropic removed the sampling knob; we put it back in analog.)",
       "",
@@ -187,15 +188,15 @@ async function main(): Promise<void> {
     case "pack":
       await cmdPack(args);
       break;
-    case "estimate":
-      cmdEstimate(args);
-      break;
-    case "bench":
+    case "bench": {
+      const runsFlag = Number(args.flags.runs);
       await runBench({
-        file: typeof args.flags.file === "string" ? args.flags.file : undefined,
+        promptFile: typeof args.flags["prompt-file"] === "string" ? args.flags["prompt-file"] : undefined,
         density: resolveDensity(args.flags),
+        runs: Number.isFinite(runsFlag) && runsFlag >= 2 ? Math.floor(runsFlag) : 4,
       });
       break;
+    }
     case "install-skill":
       cmdInstallSkill();
       break;
