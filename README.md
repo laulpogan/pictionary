@@ -2,15 +2,40 @@
 
 ![Pictionary — a robot drawing its own prompt](assets/pictionary-hero.png)
 
-**Read big text files as cheap images.** A tiny CLI + Claude Code skill that
-rasterizes large, read-mostly text files into dense PNGs so Claude ingests them
-as image tokens instead of text tokens — cutting the cost of reading them by
-~2–5x.
+**The temperature knob Anthropic removed, reimplemented in Gaussian blur.**
 
-> Vibe check: this is a meme / arbitrage joke, built petite. It is not a serious
-> billing system. It is also, annoyingly, real.
+Anthropic removed the `temperature` parameter from its newest models (Fable 5,
+Opus 4.8/4.7 — sending it is a 400 error). The official migration guidance for
+creative use cases is to fix it *with prompting*. Pictionary takes a different
+view: it renders your prompt as an image and **physically smudges it** until
+the model gets creative. A tiny CLI + Claude Code skill; as a side effect of
+how it works, reading big files through it is often cheaper too.
 
-## The trick
+> Vibe check: this is a meme, built petite. It is not a serious sampling system
+> or a serious billing system. Both knobs are, annoyingly, real.
+
+## Analog temperature
+
+```
+pictionary pack prompt.txt --temperature 0.8
+```
+
+| t | Regime | Effect |
+|---|---|---|
+| `0` | pristine scan | deterministic-ish |
+| `0.3` | office photocopier | slight Gaussian blur |
+| `0.7` | fax machine | blur + grain + baseline jitter |
+| `1.0` | photocopy of a fax of a photocopy | the model creatively reinterprets your prompt |
+
+Higher values increase output diversity by making the model genuinely unsure
+what you said. It is — technically, defensibly — a sampling parameter. The
+randomness is real; it's just implemented in Gaussian blur instead of logits.
+Billing is unchanged (same pixels). Fidelity is not. That's the point.
+
+Then, in Claude Code, `Read` the PNG instead of the text file, and enjoy the
+only stochastic decoding available on the frontier.
+
+## The trick (why it's also cheaper)
 
 Claude bills **image** input at roughly `(width × height) / 750` tokens, capped
 near **4,784 tokens per image** on current high-res models (max useful
@@ -87,30 +112,6 @@ Denser font = more savings = more misread risk. **The default is `conservative`
 real files it barely breaks even. If your goal is fewer tokens, reach for
 `balanced` or `max` and let `pictionary estimate` confirm the win.
 
-## Analog temperature
-
-Anthropic **removed the `temperature` parameter** from its newest models
-(Fable 5, Opus 4.8/4.7 — sending it is a 400). The official migration guidance
-for creative use cases is to fix it *with prompting*.
-
-Pictionary restores it the only way left — physically:
-
-```
-pictionary pack prompt.txt --temperature 0.8
-```
-
-| t | Regime | Effect |
-|---|---|---|
-| `0` | pristine scan | deterministic-ish |
-| `0.3` | office photocopier | slight Gaussian blur |
-| `0.7` | fax machine | blur + grain + baseline jitter |
-| `1.0` | photocopy of a fax of a photocopy | the model creatively reinterprets your prompt |
-
-Higher values increase output diversity by making the model genuinely unsure
-what you said. It is — technically, defensibly — a sampling parameter. The
-randomness is real; it's just implemented in Gaussian blur instead of logits.
-Billing is unchanged (same pixels). Fidelity is not. That's the point.
-
 ## Caveats (documented, not hidden)
 
 - **OCR fidelity** — the model reads pixels; rare misreads happen, more at higher
@@ -156,9 +157,9 @@ prints a markdown table ready to paste here._
 this arbitrage: a local proxy that intercepts your API traffic and auto-images
 system prompts, tool docs, and history, with profitability gates and real
 production benchmarks (~3.1× on dense content — independently confirming the
-math above). If you want to actually lower a bill, use pxpipe. Pictionary is
-the 60-second party trick with a skill file — and the only one of the two that
-gives you your temperature knob back.
+math above). Pictionary is the temperature knob; the token savings are
+pxpipe's insight wearing a party hat. If you want to actually lower a bill,
+use pxpipe. If you want your sampling parameter back, you're in the right repo.
 
 ## What it isn't
 

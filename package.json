@@ -1,7 +1,11 @@
 {
   "name": "pictionary",
   "version": "0.1.0",
-  "description": "Rasterize big read-mostly text files into dense PNGs so Claude reads them as cheap image tokens instead of expensive text tokens.",
+  "description": "The temperature knob Anthropic removed, reimplemented in Gaussian blur. Renders prompts and files as dense PNGs Claude reads as images — smudge for sampling diversity, pack for cheaper tokens.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/laulpogan/pictionary.git"
+  },
   "license": "MIT",
   "type": "commonjs",
   "bin": {
