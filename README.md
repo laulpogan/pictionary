@@ -120,6 +120,13 @@ Billing is unchanged (same pixels). Fidelity is not. That's the point.
 - **Latency** — vision processing is slower than reading text.
 - **Output-quality drift** — reasoning over OCR'd content can be slightly worse
   than over native text. The benchmark quantifies this.
+- **The extra turn** — in an agent (Claude Code), Reading a PNG is a tool call,
+  i.e. one more agentic turn that re-sends the conversation context. Most of
+  that re-send is cache-read-priced, but on a short conversation it can swamp
+  the packing savings entirely (one real single-question run measured the image
+  arm *more* expensive in raw input tokens). Packing wins when the file is big
+  and the surrounding context is small or already cached — `bench` measures
+  this end-to-end, not just the static math.
 
 When any of those bite, keep the file as text. The bundled skill encodes this
 policy: pack the boring bulk, keep load-bearing text as text.
