@@ -59,11 +59,24 @@ export function geometry(p: DensityProfile): Geometry {
 
 const TAB = "    "; // 4 spaces
 
+// XML 1.0 forbids most C0 control bytes in element text. Everything except tab,
+// LF, and CR is illegal and makes sharp/libvips reject the SVG ("PCDATA invalid
+// Char value N"), crashing pack on real-world inputs — form-feed page breaks
+// (\x0C) and ANSI color escapes (\x1B) in captured logs are the common culprits.
+// Replace each such byte with U+FFFD so column math stays exact (1 char -> 1 char)
+// and the substitution is visible rather than silent.
+const XML_ILLEGAL = /[\x00-\x08\x0B\x0C\x0E-\x1F]/g;
+
 // Wrap raw text into display lines of at most `cols` chars, preserving blank
-// lines and hard breaks. Tabs expanded so column math stays exact.
+// lines and hard breaks. Tabs expanded so column math stays exact; illegal XML
+// control bytes sanitized so the downstream SVG is always well-formed.
 export function wrapLines(text: string, cols: number): string[] {
   const out: string[] = [];
-  const raw = text.replace(/\t/g, TAB).replace(/\r\n?/g, "\n").split("\n");
+  const raw = text
+    .replace(/\t/g, TAB)
+    .replace(/\r\n?/g, "\n")
+    .replace(XML_ILLEGAL, "�")
+    .split("\n");
   for (const line of raw) {
     if (line.length === 0) {
       out.push("");
@@ -94,10 +107,18 @@ function escapeXml(s: string): string {
     .replace(/'/g, "&apos;");
 }
 
+// Height of a page holding `rowCount` display rows. Cropped to used rows so a
+// short (or full) page bills fewer image tokens than the full canvas. Single
+// source of truth so `estimate` (no-render) and `pack` (render) can never
+// disagree on token counts for the same file.
+export function pageHeight(rowCount: number, geo: Geometry): number {
+  return Math.min(PAGE_H, Math.ceil(rowCount * geo.lineHeight + 2 * MARGIN));
+}
+
 // Build an SVG for one page. Height is cropped to used rows so a short final
 // page bills fewer image tokens (honest savings math) instead of full canvas.
 export function pageSvg(lines: string[], p: DensityProfile, geo: Geometry): { svg: string; dim: PageDim } {
-  const height = Math.min(PAGE_H, Math.ceil(lines.length * geo.lineHeight + 2 * MARGIN));
+  const height = pageHeight(lines.length, geo);
   const width = PAGE_W;
   const baselineY = (rowIndex: number) => MARGIN + (rowIndex + 0.8) * geo.lineHeight;
 

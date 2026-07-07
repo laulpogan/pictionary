@@ -4,7 +4,7 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { renderFile, PROFILES, geometry, wrapLines, paginate, PageDim, Density, PAGE_W, PAGE_H, MARGIN } from "./render";
+import { renderFile, PROFILES, geometry, wrapLines, paginate, pageHeight, PageDim, Density, PAGE_W } from "./render";
 import { estimate, imageTokens, textTokens, PRICING_PER_MTOK, dollarsSaved, Estimate } from "./estimate";
 import { runBench } from "./bench";
 
@@ -38,6 +38,11 @@ function parseArgs(argv: string[]): Args {
 
 function resolveDensity(flags: Record<string, string | boolean>): Density {
   const d = flags.density;
+  if (d === true) {
+    // `--density` passed with no value consumed (last arg, or followed by another
+    // --flag). Silently defaulting would hide a dropped value — fail loud instead.
+    fail(`--density needs a value. Choose one of: ${DENSITIES.join(", ")}`);
+  }
   if (typeof d === "string") {
     if ((DENSITIES as string[]).includes(d)) return d as Density;
     fail(`unknown density "${d}". Choose one of: ${DENSITIES.join(", ")}`);
@@ -61,13 +66,10 @@ function estimateNoRender(file: string, density: Density): Estimate {
   const geo = geometry(profile);
   const lines = wrapLines(text, geo.cols);
   const pages = paginate(lines, geo.rowsPerPage);
-  const dims: PageDim[] = pages.map((pg, i) => {
-    const isLast = i === pages.length - 1;
-    const height = isLast
-      ? Math.min(PAGE_H, Math.ceil(pg.length * geo.lineHeight + 2 * MARGIN))
-      : PAGE_H;
-    return { width: PAGE_W, height };
-  });
+  const dims: PageDim[] = pages.map((pg) => ({
+    width: PAGE_W,
+    height: pageHeight(pg.length, geo),
+  }));
   return estimate(text.length, dims);
 }
 
