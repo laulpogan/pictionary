@@ -142,14 +142,22 @@ degrades gracefully if the `claude` CLI is absent.
 
 ### Results
 
-_Placeholder — run `pictionary bench --density balanced` to populate. The command
-prints a markdown table ready to paste here._
+Measured on `claude-opus-4-8`, convergent prompt (`"What is 17 multiplied by 4?"` —
+a question the model normally locks to one answer), 8 runs per level. Diversity is
+mean pairwise normalized edit distance across the runs (0 = every answer identical).
 
-```
-## Benchmark results (density: balanced)
-| Question | Text ✓ | Image ✓ | Text in-tok | Image in-tok |
-| … |
-```
+| Density | t=0 (pristine) | t=0.4 (photocopier) | t=0.8 (fax machine) |
+|---|--:|--:|--:|
+| `balanced` (~12px) | 0.000 | 0.000 | 0.000 |
+| `max` (~8px) | 0.000 | 0.000 | **0.643** |
+
+**The knob is real, but it has a threshold.** At readable sizes the model's OCR
+reads straight through the smudge — every run answered "68", diversity flat at zero,
+the temperature knob does nothing. Shrink the text to `max` density *and* turn the
+smudge up to 0.8 and the OCR finally breaks: the answer forks (0.000 → 0.643). Analog
+temperature works exactly where you'd expect — at the point where the model can no
+longer be sure what it read. Below that, it's cosmetic. Reproduce with
+`pictionary bench --density max --runs 8`.
 
 ## Prior art
 
