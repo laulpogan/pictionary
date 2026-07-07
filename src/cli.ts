@@ -50,6 +50,24 @@ function resolveDensity(flags: Record<string, string | boolean>): Density {
   return "conservative";
 }
 
+// Analog temperature: 0 = pristine scan; higher = blur + grain + jitter, so the
+// model's misreads supply the output diversity Anthropic's API no longer will.
+function resolveTemperature(flags: Record<string, string | boolean>): number {
+  const t = flags.temperature;
+  if (t === undefined) return 0;
+  if (t === true) fail("--temperature needs a value between 0 and 1.");
+  const n = Number(t);
+  if (!Number.isFinite(n) || n < 0) fail(`invalid temperature "${t}". Use a number between 0 and 1.`);
+  if (n > 1) fail("--temperature max is 1. This is a smudge, not a shredder.");
+  return n;
+}
+
+function temperatureLabel(t: number): string {
+  if (t < 0.35) return "office photocopier";
+  if (t < 0.75) return "fax machine";
+  return "photocopy of a fax of a photocopy";
+}
+
 function fail(msg: string): never {
   process.stderr.write(`pictionary: ${msg}\n`);
   process.exit(1);
@@ -112,9 +130,13 @@ async function cmdPack(args: Args): Promise<void> {
   if (!fs.existsSync(file)) fail(`pack: file not found: ${file}`);
   const density = resolveDensity(args.flags);
   const outDir = typeof args.flags.out === "string" ? args.flags.out : undefined;
+  const temperature = resolveTemperature(args.flags);
 
-  const res = await renderFile(file, density, outDir);
+  const res = await renderFile(file, density, outDir, temperature);
   const est = estimate(res.totalChars, res.dims);
+  if (temperature > 0) {
+    process.stdout.write(`\n  analog temperature ${temperature} — ${temperatureLabel(temperature)}\n`);
+  }
   printReport(file, density, est, res.files);
 }
 
@@ -143,12 +165,14 @@ function usage(): void {
       "pictionary — rasterize read-mostly text into cheap image tokens",
       "",
       "Usage:",
-      "  pictionary pack <file> [--density conservative|balanced|max] [--out dir]",
+      "  pictionary pack <file> [--density conservative|balanced|max] [--out dir] [--temperature 0..1]",
       "  pictionary estimate <file> [--density ...]",
       "  pictionary bench [--file f] [--density ...]",
       "  pictionary install-skill",
       "",
       "Densities: conservative (default, near-lossless), balanced, max (lossy risk).",
+      "Temperature: 0 pristine scan -> 1 photocopy of a fax of a photocopy.",
+      "  (Anthropic removed the sampling knob; we put it back in analog.)",
       "",
     ].join("\n")
   );

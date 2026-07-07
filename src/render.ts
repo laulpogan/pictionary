@@ -117,15 +117,21 @@ export function pageHeight(rowCount: number, geo: Geometry): number {
 
 // Build an SVG for one page. Height is cropped to used rows so a short final
 // page bills fewer image tokens (honest savings math) instead of full canvas.
-export function pageSvg(lines: string[], p: DensityProfile, geo: Geometry): { svg: string; dim: PageDim } {
+// `temperature` (0..1) adds per-line baseline jitter — the analog sampling knob.
+export function pageSvg(lines: string[], p: DensityProfile, geo: Geometry, temperature = 0): { svg: string; dim: PageDim } {
   const height = pageHeight(lines.length, geo);
   const width = PAGE_W;
   const baselineY = (rowIndex: number) => MARGIN + (rowIndex + 0.8) * geo.lineHeight;
+  const jitter = (amp: number) => (Math.random() - 0.5) * 2 * amp;
+  const ampY = temperature * p.fontPx * 0.35;
+  const ampX = temperature * p.fontPx * 0.25;
 
   const texts = lines
     .map((line, i) => {
       if (line.length === 0) return "";
-      return `<text x="${MARGIN}" y="${baselineY(i).toFixed(2)}" xml:space="preserve">${escapeXml(line)}</text>`;
+      const x = MARGIN + (temperature > 0 ? jitter(ampX) : 0);
+      const y = baselineY(i) + (temperature > 0 ? jitter(ampY) : 0);
+      return `<text x="${x.toFixed(2)}" y="${y.toFixed(2)}" xml:space="preserve">${escapeXml(line)}</text>`;
     })
     .filter(Boolean)
     .join("\n");
@@ -149,10 +155,34 @@ export interface RenderResult {
   geometry: Geometry;
 }
 
+// Analog temperature (0..1): Anthropic removed the `temperature` parameter from
+// its newest models, so Pictionary reimplements it the only way left — by
+// physically degrading the prompt. Blur + photocopier grain + baseline jitter
+// scale with t; the model's misreads supply the sampling randomness. Billing is
+// unchanged (same pixels), fidelity is not. That's the point.
+async function smudge(png: Buffer, dim: PageDim, temperature: number): Promise<Buffer> {
+  const blurred = await sharp(png)
+    .blur(0.3 + temperature * 1.1)
+    .toBuffer();
+  const grain = await sharp({
+    create: {
+      width: dim.width,
+      height: dim.height,
+      channels: 3,
+      background: { r: 128, g: 128, b: 128 },
+      noise: { type: "gaussian", mean: 128, sigma: 8 + temperature * 35 },
+    },
+  })
+    .png()
+    .toBuffer();
+  return sharp(blurred).composite([{ input: grain, blend: "soft-light" }]).png().toBuffer();
+}
+
 export async function renderFile(
   inputPath: string,
   density: Density,
-  outDir?: string
+  outDir?: string,
+  temperature = 0
 ): Promise<RenderResult> {
   const text = fs.readFileSync(inputPath, "utf8");
   const profile = PROFILES[density];
@@ -168,9 +198,11 @@ export async function renderFile(
   const dims: PageDim[] = [];
 
   for (let i = 0; i < pages.length; i++) {
-    const { svg, dim } = pageSvg(pages[i], profile, geo);
+    const { svg, dim } = pageSvg(pages[i], profile, geo, temperature);
     const outPath = path.join(dir, `${base}.p${i + 1}.png`);
-    await sharp(Buffer.from(svg)).png().toFile(outPath);
+    let png: Buffer = await sharp(Buffer.from(svg)).png().toBuffer();
+    if (temperature > 0) png = await smudge(png, dim, temperature);
+    await sharp(png).png().toFile(outPath);
     files.push(outPath);
     dims.push(dim);
   }

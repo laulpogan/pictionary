@@ -1,5 +1,7 @@
 # pictionary
 
+![Pictionary — a robot drawing its own prompt](assets/pictionary-hero.png)
+
 **Read big text files as cheap images.** A tiny CLI + Claude Code skill that
 rasterizes large, read-mostly text files into dense PNGs so Claude ingests them
 as image tokens instead of text tokens — cutting the cost of reading them by
@@ -65,7 +67,8 @@ pictionary pack bigfile.log --density balanced
 
 Subcommands:
 
-- `pictionary pack <file> [--density …] [--out dir]` — render + savings report.
+- `pictionary pack <file> [--density …] [--out dir] [--temperature 0..1]` —
+  render + savings report (see **Analog temperature** below).
 - `pictionary estimate <file> [--density …]` — the math only, no render.
 - `pictionary bench [--file f] [--density …]` — measure the savings *and* the
   fidelity tax against a real corpus via `claude -p` (see below).
@@ -83,6 +86,30 @@ Denser font = more savings = more misread risk. **The default is `conservative`
 (safest fidelity), but it is a *fidelity* mode, not a *savings* mode** — on most
 real files it barely breaks even. If your goal is fewer tokens, reach for
 `balanced` or `max` and let `pictionary estimate` confirm the win.
+
+## Analog temperature
+
+Anthropic **removed the `temperature` parameter** from its newest models
+(Fable 5, Opus 4.8/4.7 — sending it is a 400). The official migration guidance
+for creative use cases is to fix it *with prompting*.
+
+Pictionary restores it the only way left — physically:
+
+```
+pictionary pack prompt.txt --temperature 0.8
+```
+
+| t | Regime | Effect |
+|---|---|---|
+| `0` | pristine scan | deterministic-ish |
+| `0.3` | office photocopier | slight Gaussian blur |
+| `0.7` | fax machine | blur + grain + baseline jitter |
+| `1.0` | photocopy of a fax of a photocopy | the model creatively reinterprets your prompt |
+
+Higher values increase output diversity by making the model genuinely unsure
+what you said. It is — technically, defensibly — a sampling parameter. The
+randomness is real; it's just implemented in Gaussian blur instead of logits.
+Billing is unchanged (same pixels). Fidelity is not. That's the point.
 
 ## Caveats (documented, not hidden)
 
@@ -115,6 +142,16 @@ prints a markdown table ready to paste here._
 | Question | Text ✓ | Image ✓ | Text in-tok | Image in-tok |
 | … |
 ```
+
+## Prior art
+
+[**pxpipe**](https://github.com/teamchong/pxpipe) is the industrial version of
+this arbitrage: a local proxy that intercepts your API traffic and auto-images
+system prompts, tool docs, and history, with profitability gates and real
+production benchmarks (~3.1× on dense content — independently confirming the
+math above). If you want to actually lower a bill, use pxpipe. Pictionary is
+the 60-second party trick with a skill file — and the only one of the two that
+gives you your temperature knob back.
 
 ## What it isn't
 
