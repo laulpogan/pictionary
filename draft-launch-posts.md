@@ -1,6 +1,6 @@
 # Pictionary launch posts (drafts v2 — pxpipe-first framing)
 
-Repo link is a placeholder until we push: https://github.com/laulpogan/pictionary
+Repo is LIVE: https://github.com/laulpogan/pictionary (links below are real).
 No benchmark claims — billing math phrased as math until `pictionary bench` results land.
 
 ---
