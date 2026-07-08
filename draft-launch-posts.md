@@ -12,21 +12,19 @@ Assets: attach `assets/temperature/fourup.png` (the 2x2 smudge poster). Optional
 
 ## LinkedIn  (link goes in the FIRST COMMENT, not the body; algorithm penalizes body links)
 
-Anthropic removed the temperature parameter from their newest models- the one knob that controlled how random the output is- and told everyone to fix it with prompting instead.
+There's a project called pxpipe with a genuinely clever trick: Claude bills image input by area, not by character, so a page of dense text rendered as a PNG can cost a fraction of the same text as tokens. They built a whole proxy around it to cut API bills, and the numbers hold up.
 
-So I rebuilt temperature out of a photocopier.
+It got me thinking about a different hole in the API.
 
-This rides on an arbitrage a project called pxpipe already turned into real money: Claude bills image input by area, not by character, so a page of text rendered as a PNG can cost a fraction of the same text as tokens. pxpipe uses it seriously- a proxy that auto-images your API traffic to shave the bill. I used it to smuggle my prompt into the model as a picture, and then I smudged the picture.
+Anthropic removed the temperature parameter from their newest models- the one knob that controlled how random the output is- and told everyone to fix it with prompting instead. So for the first time, there's no sampling knob on the frontier.
 
-Blur it, dust it with photocopier grain, jitter the baselines off true. Now the model has to OCR its way back to your words, and past a certain point it reads them slightly wrong. Those misreads are randomness. Dial-able randomness, scaled by how hard you smudge- which is to say, a temperature knob, implemented in Gaussian blur instead of logits.
+So I took pxpipe's pricing quirk and pointed it at the sampling knob instead of the bill. Render your prompt as an image, then smudge it: blur, photocopier grain, baselines jittered off true. Now the model has to OCR its way back to your words, and past a certain point it reads them slightly wrong. Those misreads are randomness. Dial-able randomness, scaled by how hard you smudge- a temperature knob, implemented in Gaussian blur instead of logits.
 
 The stupid part is that it works. I measured it: on a question the model normally answers identically every single time, cranking the blur made its output 3x more varied. A real sampling parameter, reconstructed out of fax-machine artifacts.
 
 If that sounds like just corrupting your own input, it is. But that is what temperature always was: controlled corruption of the sampling step. I just moved the corruption upstream into the pixels, where Anthropic can't 400 it.
 
-Credit where it's due: pxpipe does the token-savings version for real, with profitability gates and production benchmarks. Pictionary takes the same pricing quirk and points it at the sampling knob instead of the bill.
-
-They took the knob off the frontier. Turns out you can rebuild it out of image compression. What's the dumbest arbitrage you've found hiding in an API's pricing model?
+pxpipe is the serious, bill-cutting version of this quirk. Pictionary is what happens when you point it at the sampling knob instead. What's the dumbest arbitrage you've found hiding in an API's pricing model?
 
 ---
 
