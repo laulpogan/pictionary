@@ -10,7 +10,7 @@ Assets: attach `assets/temperature/fourup.png` (the 2x2 smudge poster). Optional
 
 ---
 
-## LinkedIn  (link goes in the FIRST COMMENT, not the body — algorithm penalizes body links)
+## LinkedIn  (link goes in the FIRST COMMENT, not the body; algorithm penalizes body links)
 
 Anthropic removed the temperature parameter from their newest models- the one knob that controlled how random the output is- and told everyone to fix it with prompting instead.
 
@@ -28,7 +28,7 @@ They took the knob off the frontier. Turns out you can rebuild it out of image c
 
 ---
 
-## Twitter/X  (thread — hook tweet stands alone; end on the link)
+## Twitter/X  (thread; hook tweet stands alone; end on the link)
 
 1/
 Anthropic removed the temperature parameter from their newest models. Told everyone to fix it with prompting- even for creative work.
