@@ -157,20 +157,26 @@ export interface RenderResult {
 
 // Analog temperature (0..1): Anthropic removed the `temperature` parameter from
 // its newest models, so Pictionary reimplements it the only way left — by
-// physically degrading the prompt. Blur + photocopier grain + baseline jitter
-// scale with t; the model's misreads supply the sampling randomness. Billing is
-// unchanged (same pixels), fidelity is not. That's the point.
-async function smudge(png: Buffer, dim: PageDim, temperature: number): Promise<Buffer> {
-  const blurred = await sharp(png)
-    .blur(0.3 + temperature * 1.1)
-    .toBuffer();
+// physically degrading the prompt. The model's misreads supply the sampling
+// randomness. Billing is unchanged (same pixels), fidelity is not. That's the point.
+//
+// CRUCIAL: the degradation scales with FONT SIZE, not absolute pixels. A fixed 1px
+// blur is heavy on 8px text but negligible on 14px text — so a font-independent
+// smudge silently no-ops at readable densities (the model's OCR reads right through
+// it) and only bites at `max`. Anchoring blur + grain to fontPx makes t=0.8 produce
+// the same *relative* corruption at any density, so the knob always does something.
+// Anchor point: fontPx=8 @ t=0.8 reproduces the measured break (blur~1.15, sigma~34).
+async function smudge(png: Buffer, dim: PageDim, temperature: number, fontPx: number): Promise<Buffer> {
+  const blurRadius = Math.max(0.3, fontPx * temperature * 0.18);
+  const grainSigma = fontPx * (1 + temperature * 4);
+  const blurred = await sharp(png).blur(blurRadius).toBuffer();
   const grain = await sharp({
     create: {
       width: dim.width,
       height: dim.height,
       channels: 3,
       background: { r: 128, g: 128, b: 128 },
-      noise: { type: "gaussian", mean: 128, sigma: 8 + temperature * 35 },
+      noise: { type: "gaussian", mean: 128, sigma: grainSigma },
     },
   })
     .png()
@@ -201,7 +207,7 @@ export async function renderFile(
     const { svg, dim } = pageSvg(pages[i], profile, geo, temperature);
     const outPath = path.join(dir, `${base}.p${i + 1}.png`);
     let png: Buffer = await sharp(Buffer.from(svg)).png().toBuffer();
-    if (temperature > 0) png = await smudge(png, dim, temperature);
+    if (temperature > 0) png = await smudge(png, dim, temperature, profile.fontPx);
     await sharp(png).png().toFile(outPath);
     files.push(outPath);
     dims.push(dim);

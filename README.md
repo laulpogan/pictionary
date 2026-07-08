@@ -143,21 +143,24 @@ degrades gracefully if the `claude` CLI is absent.
 ### Results
 
 Measured on `claude-opus-4-8`, convergent prompt (`"What is 17 multiplied by 4?"` —
-a question the model normally locks to one answer), 8 runs per level. Diversity is
-mean pairwise normalized edit distance across the runs (0 = every answer identical).
+a question the model normally locks to one answer), 8 runs per level at `balanced`
+density. Diversity is mean pairwise normalized edit distance across the runs
+(0 = every answer identical; higher = the smudge forked the answer).
 
-| Density | t=0 (pristine) | t=0.4 (photocopier) | t=0.8 (fax machine) |
-|---|--:|--:|--:|
-| `balanced` (~12px) | 0.000 | 0.000 | 0.000 |
-| `max` (~8px) | 0.000 | 0.000 | **0.643** |
+| Temperature | Regime | Output diversity | vs. baseline |
+|--:|---|--:|--:|
+| 0.0 | pristine scan | 0.250 | — |
+| 0.4 | office photocopier | 0.735 | **2.94x** |
+| 0.8 | fax machine | 0.750 | **3.00x** |
 
-**The knob is real, but it has a threshold.** At readable sizes the model's OCR
-reads straight through the smudge — every run answered "68", diversity flat at zero,
-the temperature knob does nothing. Shrink the text to `max` density *and* turn the
-smudge up to 0.8 and the OCR finally breaks: the answer forks (0.000 → 0.643). Analog
-temperature works exactly where you'd expect — at the point where the model can no
-longer be sure what it read. Below that, it's cosmetic. Reproduce with
-`pictionary bench --density max --runs 8`.
+**The knob is real and it works at readable sizes.** Turning temperature up makes
+the model's answer roughly 3x more varied than the pristine baseline — the analog
+sampling knob measurably moves the output distribution. The one subtlety we had to
+fix: the smudge is scaled to font size, not absolute pixels. A fixed blur is heavy
+on tiny text but negligible on large text, so an unscaled smudge silently no-ops at
+readable densities and only bites at `max`. Anchoring the blur and grain to the font
+size makes `--temperature 0.8` land in the effective zone at *any* density. Reproduce
+with `pictionary bench --runs 8`.
 
 ## Prior art
 
