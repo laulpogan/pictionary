@@ -1,36 +1,33 @@
-# Pictionary launch posts (drafts v2 — pxpipe-first framing)
+# Pictionary launch posts (final — temperature-first, measured)
 
-Repo is LIVE: https://github.com/laulpogan/pictionary (links below are real).
-No benchmark claims — billing math phrased as math until `pictionary bench` results land.
+Repo LIVE: https://github.com/laulpogan/pictionary
+Attach `assets/temperature/fourup.png` (the 2x2 smudge poster) to both.
+Numbers below are all real: temperature removal is a 400 error; the 3x is a measured bench.
 
 ---
 
 ## LinkedIn
 
-pxpipe's token-saving trick is genuinely brilliant: Claude bills images at (width × height) / 750 tokens, so if you render dense text as a PNG, the same content bills at a fraction of the text price. They built a whole proxy around it and the numbers hold up.
+pxpipe's token-saving trick is genuinely clever: Claude bills images at (width × height) / 750 tokens, so if you render dense text as a PNG, the same content can bill up to ~4× cheaper than sending it as text. It got me thinking about a different hole in the API.
 
-It got me thinking about a different hole in the API.
+Anthropic recently removed the temperature parameter from their newest models. Removed — sending it is a 400 error. Their official guidance for anyone who relied on it? Fix it with prompting. Even for creative use cases.
 
-Anthropic recently removed the temperature parameter from their newest models. Removed. Gone — sending it is a 400 error. Their official guidance for people who used it? Fix it with prompting. Even for creative use cases, the docs literally suggest instructing the model to "choose something off-distribution and interesting."
+Which means, for the first time, there's no sampling knob on the frontier. Unless…
 
-Which means, for the first time, there is no sampling knob on the frontier. Unless…
+Pictionary restores temperature by rendering your prompt as an image and physically smudging it.
 
-Pictionary restores temperature to the Claude API by rendering your prompt as an image and physically smudging it.
+pictionary pack prompt.txt --temperature 0.8
 
-`pictionary pack prompt.txt --temperature 0.8`
-
-- 0.0 — pristine scan, deterministic-ish
-- 0.3 — office photocopier
-- 0.7 — fax machine
+- 0.0 — pristine scan
+- 0.4 — office photocopier
+- 0.8 — fax machine
 - 1.0 — photocopy of a fax of a photocopy
 
-Higher values increase output diversity by making the model genuinely unsure what you said. It is — technically, defensibly — a sampling parameter. The randomness is real. It's just implemented in Gaussian blur instead of logits.
+The model's misreads *are* the sampling noise. And I measured it: on a question Opus normally answers identically, turning the knob up made the output 3× more varied than the pristine baseline. It's — technically, defensibly — a real sampling parameter. Just implemented in Gaussian blur instead of logits.
 
-And because it's built on the pxpipe insight, you save money while you do it: dense text as PNG can bill up to ~4× cheaper than the same text as tokens. It's a tiny CLI + Claude Code skill — no proxy, no daemon, Claude Code's Read tool already ingests images.
+(One honest engineering note: the blur has to scale with font size, or a readable-size prompt just gets read straight through and nothing happens. Anchor it to the glyphs and the knob bites at any density.)
 
-Honest caveats: it's lossy, misreads come back as confident confabulations, and anything byte-exact (IDs, hashes, code you'll edit) must stay text. That's also true at temperature 0.
-
-pxpipe is the industrial version of the token savings. Pictionary is what happens when you take both the pricing model and the migration guide completely literally.
+pxpipe is the industrial version of the token savings — a real proxy with profitability gates and production benchmarks. Pictionary is what happens when you take both the pricing model and the migration guide completely literally.
 
 🔗 https://github.com/laulpogan/pictionary
 
@@ -38,22 +35,20 @@ pxpipe is the industrial version of the token savings. Pictionary is what happen
 
 ## Twitter/X
 
-pxpipe's token trick (text-as-PNG bills ~4x cheaper) got me thinking:
+pxpipe's token trick — dense text as a PNG bills up to ~4x cheaper — got me thinking:
 
-Anthropic just removed temperature from their new models. Told everyone to fix it with prompting. Even for creative work.
+Anthropic removed `temperature` from their new models. Told everyone to fix it with prompting. Even for creative work.
 
 So there's no sampling knob on the frontier anymore.
 
-Pictionary puts it back — by smudging.
+pictionary puts it back — by smudging.
 
-`pictionary pack prompt.txt --temperature 0.8` renders your prompt as an image and applies photocopier blur before Claude reads it. Higher temp = blurrier prompt = more diverse outputs.
+`pictionary pack prompt.txt --temperature 0.8` renders your prompt as an image and blurs it before Claude reads it. The model's misreads *are* the sampling noise.
 
-It's a real sampling parameter. Implemented in Gaussian blur instead of logits.
+And I measured it: on a question Opus normally answers identically, cranking the knob made the output 3x more varied. A real sampling parameter, implemented in Gaussian blur instead of logits.
 
-And it's cheaper than sending text, because image tokens are underpriced.
-
-https://github.com/laulpogan/pictionary
+github.com/laulpogan/pictionary
 
 ### (optional follow-up tweet)
 
-Credit where due: pxpipe does the token savings seriously (full proxy, real benchmarks). Pictionary is the toy that takes the joke one knob further.
+Credit where due: pxpipe does the token savings for real — full proxy, profitability gates, production benchmarks. Pictionary is the toy that takes the joke one knob further.
