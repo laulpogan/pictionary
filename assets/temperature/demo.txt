@@ -1,0 +1,5 @@
+The lighthouse keeper logged the storm at 03:47.
+Seventeen ships passed the shoal that night; only nine returned.
+The Tunbridge coefficient held at 0.734 until the fog rolled in.
+Analog temperature is a real sampling parameter.
+It is just implemented in Gaussian blur instead of logits.

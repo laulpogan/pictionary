@@ -44,6 +44,22 @@ decoding left on the frontier.
 Billing is unchanged (same pixels). Fidelity is not. That's the point. The smudge
 scales with font size, so the knob bites at any density — not just the tiny one.
 
+### What the smudge looks like
+
+Same five lines, four temperatures (balanced density):
+
+`t=0` — pristine scan
+![temperature 0](assets/temperature/t0.png)
+
+`t=0.4` — office photocopier
+![temperature 0.4](assets/temperature/t0.4.png)
+
+`t=0.8` — fax machine
+![temperature 0.8](assets/temperature/t0.8.png)
+
+`t=1.0` — photocopy of a fax of a photocopy
+![temperature 1.0](assets/temperature/t1.0.png)
+
 ## It's also cheaper (the pxpipe trick)
 
 Claude bills images at ~`(w × h) / 750` tokens, capped near 4,784/image; text at
