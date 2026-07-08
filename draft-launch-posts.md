@@ -16,13 +16,15 @@ Anthropic removed the temperature parameter from their newest models- the one kn
 
 So I rebuilt temperature out of a photocopier.
 
-Quick background on the arbitrage this rides on: Claude bills image input by area, not by character, so a page of text rendered as a PNG can cost a fraction of the same text as tokens. Most people who know this trick use it to shave a bill. I used it to smuggle my prompt into the model as a picture- and then I smudged the picture.
+This rides on an arbitrage a project called pxpipe already turned into real money: Claude bills image input by area, not by character, so a page of text rendered as a PNG can cost a fraction of the same text as tokens. pxpipe uses it seriously- a proxy that auto-images your API traffic to shave the bill. I used it to smuggle my prompt into the model as a picture, and then I smudged the picture.
 
 Blur it, dust it with photocopier grain, jitter the baselines off true. Now the model has to OCR its way back to your words, and past a certain point it reads them slightly wrong. Those misreads are randomness. Dial-able randomness, scaled by how hard you smudge- which is to say, a temperature knob, implemented in Gaussian blur instead of logits.
 
 The stupid part is that it works. I measured it: on a question the model normally answers identically every single time, cranking the blur made its output 3x more varied. A real sampling parameter, reconstructed out of fax-machine artifacts.
 
-"BuT pAuL," you might say, "that's just corrupting your own input." Correct, idiot. That's what temperature always was- controlled corruption of the sampling step. I just moved the corruption upstream into the pixels, where Anthropic can't 400 it.
+If that sounds like just corrupting your own input, it is. But that is what temperature always was: controlled corruption of the sampling step. I just moved the corruption upstream into the pixels, where Anthropic can't 400 it.
+
+Credit where it's due: pxpipe does the token-savings version for real, with profitability gates and production benchmarks. Pictionary takes the same pricing quirk and points it at the sampling knob instead of the bill.
 
 They took the knob off the frontier. Turns out you can rebuild it out of image compression. What's the dumbest arbitrage you've found hiding in an API's pricing model?
 
@@ -72,3 +74,25 @@ github.com/laulpogan/pictionary
 - Anthropic: we removed temperature, just prompt for it. me, quietly wheeling in a photocopier: no.
 - the only stochastic decoding left on the frontier is a Gaussian blur, and I think that says something about all of us.
 - turns out "just prompt for it" has a loophole and the loophole is a fax machine.
+
+---
+
+## Reddit r/claude  (technical show-and-tell register, not the spicy essay voice; attach the fourup progression)
+
+**Title:** Anthropic removed `temperature` from the newest models, so I put it back by rendering the prompt as an image and physically smudging it
+
+**Body:**
+
+The newest models (Opus 4.8/4.7, Fable 5) return a 400 if you send `temperature`, and the official guidance is to steer with prompting instead. So there's effectively no sampling knob on the frontier anymore.
+
+I made a dumb little CLI that reconstructs one. It renders your prompt to a PNG and applies blur + photocopier grain + baseline jitter before Claude reads it as an image. Past a certain smudge level the OCR starts misreading, and those misreads act like sampling noise. `pictionary pack prompt.txt --temperature 0.8` gives you the fax-machine look.
+
+The part I didn't expect: it actually measures out. On a prompt Opus normally answers identically every time, cranking the smudge made the output ~3x more varied (mean pairwise edit distance across runs, benched through `claude -p` so no API key needed). One gotcha I had to fix along the way: the blur has to scale with font size, or at readable densities the model just reads straight through it and nothing happens.
+
+It rides the same quirk pxpipe uses for cost savings (Claude bills image input by area, so dense text as a PNG is cheap) except here the point isn't the savings, it's getting a sampling dial back.
+
+Obviously a meme, not a serious sampling system, and anything byte-exact (IDs, hashes, code you'll edit) should stay as text. But the knob is, annoyingly, real.
+
+Repo: https://github.com/laulpogan/pictionary
+
+[attach assets/temperature/fourup.png]
