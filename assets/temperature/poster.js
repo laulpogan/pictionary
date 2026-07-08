@@ -28,7 +28,7 @@ function overlaySvg() {
   const parts = [];
   parts.push(
     `<text x="${W / 2}" y="52" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" ` +
-      `font-size="34" font-weight="700" fill="#111">Analog temperature — sampling by Gaussian blur, not logits</text>`
+      `font-size="34" font-weight="700" fill="#111">Analog temperature: sampling by Gaussian blur, not logits</text>`
   );
   parts.push(
     `<text x="${W / 2}" y="84" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" ` +

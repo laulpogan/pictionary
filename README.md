@@ -1,8 +1,8 @@
 # pictionary
 
-![Pictionary — a robot drawing its own prompt](assets/pictionary-hero.png)
+![Pictionary, a robot drawing its own prompt](assets/pictionary-hero.png)
 
-**Anthropic removed the `temperature` parameter. Pictionary puts it back — in Gaussian blur.**
+**Anthropic removed the `temperature` parameter. Pictionary puts it back, in Gaussian blur.**
 
 The newest models (Fable 5, Opus 4.8/4.7) return a 400 if you send `temperature`;
 the official guidance is to "prompt for it." Pictionary disagrees: it renders your
@@ -21,7 +21,7 @@ made the output **3x more varied**:
 <sub>`claude-opus-4-8`, 8 runs/level, balanced density. Diversity = mean pairwise edit
 distance across runs (0 = identical). Reproduce: `pictionary bench --runs 8`.</sub>
 
-> A meme, built petite — not a serious sampling system. The knob is, annoyingly, real.
+> A meme, built petite, not a serious sampling system. The knob is, annoyingly, real.
 
 ## Quickstart
 
@@ -31,7 +31,7 @@ pictionary install-skill
 pictionary pack prompt.txt --temperature 0.8
 ```
 
-Then, in Claude Code, `Read` the PNG instead of the text file — the only stochastic
+Then, in Claude Code, `Read` the PNG instead of the text file, the only stochastic
 decoding left on the frontier.
 
 | t | regime |
@@ -42,11 +42,11 @@ decoding left on the frontier.
 | `1.0` | photocopy of a fax of a photocopy |
 
 Billing is unchanged (same pixels). Fidelity is not. That's the point. The smudge
-scales with font size, so the knob bites at any density — not just the tiny one.
+scales with font size, so the knob bites at any density, not just the tiny one.
 
 ### What the smudge looks like
 
-Same four lines, four temperatures — pristine scan to photocopy-of-a-fax:
+Same four lines, four temperatures, pristine scan to photocopy-of-a-fax:
 
 ![Analog temperature progression from t=0 to t=1.0](assets/temperature/fourup.png)
 
@@ -54,8 +54,8 @@ Same four lines, four temperatures — pristine scan to photocopy-of-a-fax:
 
 Claude bills images at ~`(w × h) / 750` tokens, capped near 4,784/image; text at
 ~4 chars/token. Pack enough characters under that cap and a page of text bills like
-a fraction of itself — up to ~3.8x cheaper at `max` density. Real files rarely fill
-every line, though, so run `pictionary pack --dry-run` first — it tells you whether
+a fraction of itself, up to ~3.8x cheaper at `max` density. Real files rarely fill
+every line, though, so run `pictionary pack --dry-run` first, it tells you whether
 packing your actual file wins.
 
 | density | font | best case | fidelity |
@@ -69,18 +69,18 @@ downscales; long inputs paginate to `file.p1.png`, `.p2.png`, …
 
 ## Commands
 
-- `pack <file> [--density …] [--temperature 0..1] [--out dir] [--dry-run]` — render
+- `pack <file> [--density …] [--temperature 0..1] [--out dir] [--dry-run]`: render
   the PNG(s) + a savings report. `--dry-run` prints the token math without rendering.
-- `bench [--prompt-file f] [--runs N] [--density …]` — measure whether the smudge
+- `bench [--prompt-file f] [--runs N] [--density …]`: measure whether the smudge
   actually moves the output, via `claude -p` over your OAuth login (no API key, no SDK).
-- `install-skill` — teach Claude Code when to reach for this, and when not to.
+- `install-skill`, teach Claude Code when to reach for this, and when not to.
 
 ## Caveats
 
-- **OCR fidelity** — the model reads pixels; misreads happen (the feature at high
+- **OCR fidelity**: the model reads pixels; misreads happen (the feature at high
   temperature, the bug at low). Never pack anything byte-exact: IDs, hashes, code you'll edit.
-- **No prompt caching** — image reads skip the cached-prefix discount. Best for read-once bulk.
-- **The extra turn** — in an agent, Reading a PNG is another tool call that re-sends
+- **No prompt caching**: image reads skip the cached-prefix discount. Best for read-once bulk.
+- **The extra turn**: in an agent, Reading a PNG is another tool call that re-sends
   the conversation; on a short chat that can erase the packing savings. It wins when
   the file is big and the surrounding context is small or already cached. `bench`
   measures it end-to-end, not just the static math.
@@ -89,7 +89,7 @@ Keep load-bearing text as text; pack the boring bulk. The bundled skill encodes 
 
 ## Prior art
 
-[**pxpipe**](https://github.com/teamchong/pxpipe) does the token savings for real —
+[**pxpipe**](https://github.com/teamchong/pxpipe) does the token savings for real:
 a proxy that auto-images your API traffic with profitability gates and production
 benchmarks (~3.1x on dense content, independently confirming the math). Pictionary is
 the temperature knob wearing a party hat. Want a lower bill? Use pxpipe. Want your
